@@ -221,8 +221,76 @@ def validate_ipv6(ipv6_block):
             
     return True
 
-def generate_locations():
-    pass
+'''
+Recebe do usuário a quantidade de localidades e seus respectivos nomes.
+Retorna uma lista contendo os nomes informados.
+'''
+
+def get_locations():
+
+    locations = []
+
+    while True:
+
+        try:
+        
+            num_locations = int(input('Enter the number of locations: '))
+
+            if num_locations > 0:
+
+                break
+
+            print('\nThe number of locations must be greater than zero.')
+
+        except:
+
+            print('\nInvalid number. Try again.')
+
+    for i in range(num_locations):
+
+        location = input(f'\nEnter the name of location {i + 1}: ')
+
+        locations.append(location)
+    
+    return locations 
+
+'''
+Gera um prefixo IPv6 /48 para cada localidade informada pelo usuário.
+Retorna um dicionário contendo o nome da localidade e seu
+respectivo prefixo IPv6.
+'''
+
+def generate_locations(ipv6_block):
+    
+    ipv6_blocks = expand_ipv6(ipv6_block)
+
+    locations = get_locations()
+
+    # Dicionário que armazenará cada localidade e seu respectivo ipv6. 
+    locations_ipv6 = {}
+
+    # Para cada uma das localidades 
+    for i, location in enumerate(locations):
+
+        # Copiamos o endereço base. 
+        location_blocks = ipv6_blocks.copy()
+
+        # O bloco principal do trabalho é um /32.
+        # Portanto, utilizamos o terceiro bloco IPv6 para identificar
+        # cada localidade, gerando prefixos /48.
+        location_blocks[2] = hex(i)[2:].zfill(4)
+
+        # Comprimindo o bloco. 
+        formatted_location_blocks = format_ipv6(location_blocks)
+
+        #Adiciona o prefixo '/48'
+        location_prefix = formatted_location_blocks + '/48'
+
+        #Guarda no dicionário. 
+        locations_ipv6[location] = location_prefix
+    
+    return locations_ipv6
+
 
 def generate_subnets():
     pass
