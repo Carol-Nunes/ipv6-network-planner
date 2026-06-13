@@ -11,7 +11,7 @@ cada um com 4 dígitos hexadecimais.
 def expand_ipv6(ipv6_block):
 
     # Separa o endereço IPv6 do tamanho do prefixo.
-    ipv6_address, _ = ipv6_block.split('/')
+    ipv6_address = ipv6_block.split('/')[0]
 
     # Se o endereço estiver abreviado utilizando "::",
     # será necessário inserir os blocos de zeros faltantes.
@@ -450,8 +450,23 @@ def rightmost_allocation(clients_networks):
     
     return clients_networks.pop()
 
-def reserve_anycast():
-    pass
+'''
+Reserva um endereço IPv6 para utilização como Anycast.
+
+O endereço reservado corresponde ao primeiro endereço utilizável
+da sub-rede, sendo representado pelo identificador ::1.
+'''
+
+def reserve_anycast(subnet_ipv6):
+    
+    anycast_address_blocks = expand_ipv6(subnet_ipv6)
+
+    # Utiliza o identificador ::1 como endereço Anycast.
+    anycast_address_blocks[7] = '0001'
+
+    formatted_anycast = format_ipv6(anycast_address_blocks)
+
+    return formatted_anycast
 
 
 
