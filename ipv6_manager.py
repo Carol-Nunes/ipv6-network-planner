@@ -332,11 +332,9 @@ endereçamento e futuras subdivisões em redes menores.
 '''
 
 
-def generate_subnets(location_ipv6):
+def generate_subnets(location_ipv6, subnets):
     
     ipv6_blocks = expand_ipv6(location_ipv6)
-
-    subnets = get_subnets()
 
     # Dicionário que armazenará cada sub-rede e seu respectivo IPv6.
     subnets_ipv6 = {}
@@ -364,21 +362,11 @@ def generate_subnets(location_ipv6):
     return subnets_ipv6
 
 '''
-Gera redes IPv6 /64 para clientes a partir de uma sub-rede /56.
-
-Essa função é utilizada para simular a distribuição de redes
-IPv6 para clientes e servir de base para os algoritmos de
-alocação Leftmost e Rightmost.
-
-Retorna uma lista contendo os prefixos IPv6 gerados.
+Solicita ao usuário a quantidade de clientes que deverão
+receber redes IPv6.
 '''
 
-def generate_clients_allocation(subnet_ipv6):
-
-    ipv6_blocks = expand_ipv6(subnet_ipv6)
-
-    # Lista que armazenará os prefixos IPv6 gerados para os clientes.
-    clients_networks = []
+def get_number_of_clients():
 
     while True:
 
@@ -388,15 +376,30 @@ def generate_clients_allocation(subnet_ipv6):
 
             if num_clients > 0:
 
-                break
+                return num_clients
 
-            else:
-
-                print('\nThe number of clients must be greater than zero.')
+            print('\nThe number of clients must be greater than zero.')
 
         except:
 
             print('\nInvalid number. Try again.')
+
+'''
+Gera redes IPv6 /64 para clientes a partir de uma sub-rede /56.
+
+Essa função é utilizada para simular a distribuição de redes
+IPv6 para clientes e servir de base para os algoritmos de
+alocação Leftmost e Rightmost.
+
+Retorna uma lista contendo os prefixos IPv6 gerados.
+'''
+
+def generate_clients_networks(subnet_ipv6, num_clients):
+
+    ipv6_blocks = expand_ipv6(subnet_ipv6)
+
+    # Lista que armazenará os prefixos IPv6 gerados para os clientes.
+    clients_networks = []
 
     # Para cada uma das sub-redes. 
     for i in range(num_clients):
@@ -468,7 +471,105 @@ def reserve_anycast(subnet_ipv6):
 
     return formatted_anycast
 
+'''
+Solicita ao usuário um bloco IPv6 válido.
+Retorna o bloco IPv6 informado.
+'''
+def get_ipv6_block():
 
+    while True:
+
+        ipv6_block = input('\nEnter the IPv6 block (e.g. 2804:1f4a::/32): ')
+
+        if validate_ipv6(ipv6_block):
+
+            return ipv6_block
+
+        print('\nInvalid IPv6 block. Try again.')
+
+
+'''
+Gera e exibe toda a hierarquia de planejamento IPv6,
+incluindo localidades, sub-redes, redes de clientes e endereços anycast.
+'''
+
+def generate_ipv6_planning():
+
+    ipv6_block = get_ipv6_block()
+
+    locations_ipv6 = generate_locations(ipv6_block)
+
+    subnets = get_subnets
+
+    num_clients = get_number_of_clients()
+
+    planning = {}
+
+    for location, location_prefix in locations_ipv6.items():
+
+        planning[location] = {}
+
+        subnets_ipv6 = generate_subnets(location_prefix, subnets)
+
+        for subnet, subnet_prefix in subnets_ipv6.items():
+
+            clients_networks = generate_clients_networks(subnet_prefix, num_clients)
+
+            anycast_address = reserve_anycast(subnet_prefix)
+
+            planning[location][subnet] = {
+
+                'prefix': subnet_prefix,
+                
+                'anycast': anycast_address,
+
+                'clients_networks': clients_networks
+            }
+
+    return planning
+
+def show_menu():
+
+    
+    print('\n=========================================')
+    print(' IPv6 Network Planner ')
+    print('=========================================')
+    print('1 - Generate IPv6 Planning')
+    print('2 - Simulate Leftmost Allocation')
+    print('3 - Simulate Rightmost Allocation')
+    print('0 - Exit')
+    print('=========================================')
+
+def menu():
+
+    while True:
+
+        show_menu()
+
+        option = input('Enter the option: ')
+
+        match option:
+
+            case '1':
+
+                pass
+
+            case '2':
+
+                pass
+
+            case '3':
+
+                pass
+
+            case '0':
+
+                print('\nExiting program...')
+                break
+
+            case _:
+
+                 print('\nInvalid option.')
 
 if __name__ == "__main__":
     menu()
