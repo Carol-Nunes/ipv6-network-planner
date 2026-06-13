@@ -420,8 +420,20 @@ def generate_clients_allocation(subnet_ipv6):
     return clients_networks
 
 
-def leftmost_allocation():
-    pass
+'''
+Aloca a primeira rede disponível utilizando
+o algoritmo Leftmost Allocation.
+'''
+
+def leftmost_allocation(clients_networks):
+    
+    clients_networks_length = len(clients_networks)
+
+    if clients_networks_length == 0:
+
+        return None
+    
+    return clients_networks.pop(0)
 
 def rightmost_allocation():
     pass
