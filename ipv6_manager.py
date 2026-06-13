@@ -291,9 +291,77 @@ def generate_locations(ipv6_block):
     
     return locations_ipv6
 
+'''
+Recebe do usuário a quantidade de subredes e seus respectivos nomes.
+Retorna uma lista contendo os nomes informados.
+'''
 
-def generate_subnets():
-    pass
+def get_subnets():
+
+    subnets = []
+
+    while True:
+
+        try:
+        
+            num_subnets = int(input('Enter the number of subnets: '))
+
+            if num_subnets > 0:
+
+                break
+
+            print('\nThe number of subnets must be greater than zero.')
+
+        except:
+
+            print('\nInvalid number. Try again.')
+
+    for i in range(num_subnets):
+
+        subnet = input(f'\nEnter the name of subnet {i + 1}: ')
+
+        subnets.append(subnet)
+    
+    return subnets 
+
+'''
+Divide o prefixo IPv6 de uma localidade (/48) em sub-redes /56.
+Cada sub-rede recebe um identificador único no quarto bloco do
+endereço IPv6, permitindo a organização hierárquica do
+endereçamento e futuras subdivisões em redes menores.
+'''
+
+
+def generate_subnets(location_ipv6):
+    
+    ipv6_blocks = expand_ipv6(location_ipv6)
+
+    subnets = get_subnets()
+
+    # Dicionário que armazenará cada sub-rede e seu respectivo IPv6.
+    subnets_ipv6 = {}
+
+    # Para cada uma das sub-redes. 
+    for i, subnet in enumerate(subnets):
+
+        # Copiamos o endereço base. 
+        subnet_blocks = ipv6_blocks.copy()
+
+        # Como estamos dividindo um prefixo /48 em prefixos /56,
+        # utilizamos os primeiros 8 bits do quarto bloco para
+        # identificar cada sub-rede.
+        subnet_blocks[3] = hex(i * 256)[2:].zfill(4)
+
+        # Comprimindo o bloco. 
+        formatted_subnet_blocks = format_ipv6(subnet_blocks)
+
+        #Adiciona o prefixo '/56'
+        subnet_prefix = formatted_subnet_blocks + '/56'
+
+        #Guarda no dicionário. 
+        subnets_ipv6[subnet] = subnet_prefix
+    
+    return subnets_ipv6
 
 def leftmost_allocation():
     pass
@@ -304,11 +372,6 @@ def rightmost_allocation():
 def reserve_anycast():
     pass
 
-def show_concepts():
-    pass
-
-def menu():
-    pass
 
 
 if __name__ == "__main__":
