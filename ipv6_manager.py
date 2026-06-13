@@ -685,34 +685,51 @@ def show_menu():
 
 def menu():
 
+    planning = None
+
     while True:
 
         show_menu()
 
         option = input('Enter the option: ')
 
-        match option:
+        if option == '1':
 
-            case '1':
+            planning = generate_ipv6_planning()
 
-                pass
+            show_planning(planning)
 
-            case '2':
+        elif option == '2':
 
-                pass
+            if planning is None:
 
-            case '3':
+                print('\nGenerate an IPv6 planning first.')
 
-                pass
+            else:
 
-            case '0':
+                simulate_leftmost(planning)
+
+        elif option == '3':
+
+            if planning is None:
+
+                print('\nGenerate an IPv6 planning first.')
+
+            else:
+
+                simulate_rightmost(planning)
+
+
+        elif option == '0':
 
                 print('\nExiting program...')
                 break
 
-            case _:
+        else:
 
-                 print('\nInvalid option.')
+                print('\nInvalid option.')
+
+
 
 if __name__ == "__main__":
     menu()
