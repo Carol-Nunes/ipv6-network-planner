@@ -592,6 +592,38 @@ def select_location(planning):
 
             print('\nInvalid option. Try again.')
 
+'''
+Permite ao usuário selecionar uma sub-rede
+de uma determinada localidade.
+
+Retorna o nome da sub-rede selecionada.
+'''
+def select_subnet(planning, location):
+
+    subnets = list(planning[location].keys())
+
+    while True:
+
+        try:
+
+            print('\nSelect a subnet:\n')
+
+            for i, subnet in enumerate(subnets):
+
+                print(f'{i + 1} - {subnet}')
+
+            option = int(input('\nOption: '))
+
+            if option >= 1 or option <= len(subnets):
+
+                return subnets[option - 1]
+
+            print('\nInvalid option. Try again.')
+
+        except:
+
+            print('\nInvalid option. Try again.')
+
 
 def show_menu():
 
