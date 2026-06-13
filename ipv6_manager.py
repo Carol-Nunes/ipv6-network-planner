@@ -439,8 +439,8 @@ def leftmost_allocation(clients_networks):
     return clients_networks.pop(0)
 
 '''
-Aloca a primeira rede disponível utilizando
-o algoritmo Leftmost Allocation.
+Aloca a última rede disponível utilizando
+o algoritmo Rightmost Allocation.
 '''
 
 def rightmost_allocation(clients_networks):
@@ -526,7 +526,72 @@ def generate_ipv6_planning():
                 'clients_networks': clients_networks
             }
 
-    return planning
+    return planning, ipv6_block
+
+'''
+Exibe toda a estrutura de planejamento IPv6
+gerada pelo sistema.
+'''
+
+def show_planning(planning, ipv6_block):
+
+    print('\n=========================================')
+    print('IPv6 Planning')
+    print('=========================================')
+    print(f'\nIPv6 block: {ipv6_block}')
+
+    for location, subnets in planning.items():
+
+        print(f'\nLocation: {location}')
+
+        for subnet, subnet_data in subnets.items():
+
+            print(f'\n    Subnet: {subnet}')
+
+            print(f'    Prefix: '
+                f'{subnet_data["prefix"]}')
+
+            print(f'    Anycast: '
+                f'{subnet_data["anycast"]}')
+
+            print('\n    Client Networks:')
+
+            for i, network in enumerate(subnet_data['client_networks']):
+
+                print(f'        Client {i + 1}'
+                    f' -> {network}')
+'''
+Permite ao usuário selecionar uma localidade
+do planejamento IPv6.
+
+Retorna o nome da localidade selecionada.
+'''
+def select_location(planning):
+
+    locations = list(planning.keys())
+
+    while True:
+
+        try:
+
+            print('\nSelect a location:\n')
+
+            for i, location in enumerate(locations):
+
+                print(f'{i + 1} - {location}')
+
+            option = int(input('\nOption: '))
+
+            if option >= 1 or option <= len(locations):
+
+                return locations[option - 1]
+
+            print('\nInvalid option. Try again.')
+
+        except:
+
+            print('\nInvalid option. Try again.')
+
 
 def show_menu():
 
