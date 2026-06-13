@@ -234,7 +234,7 @@ def get_locations():
 
         try:
         
-            num_locations = int(input('Enter the number of locations: '))
+            num_locations = int(input('\nEnter the number of locations: '))
 
             if num_locations > 0:
 
@@ -304,7 +304,7 @@ def get_subnets():
 
         try:
         
-            num_subnets = int(input('Enter the number of subnets: '))
+            num_subnets = int(input('\nEnter the number of subnets: '))
 
             if num_subnets > 0:
 
@@ -362,6 +362,63 @@ def generate_subnets(location_ipv6):
         subnets_ipv6[subnet] = subnet_prefix
     
     return subnets_ipv6
+
+'''
+Gera redes IPv6 /64 para clientes a partir de uma sub-rede /56.
+
+Essa função é utilizada para simular a distribuição de redes
+IPv6 para clientes e servir de base para os algoritmos de
+alocação Leftmost e Rightmost.
+
+Retorna uma lista contendo os prefixos IPv6 gerados.
+'''
+
+def generate_clients_allocation(subnet_ipv6):
+
+    ipv6_blocks = expand_ipv6(subnet_ipv6)
+
+    # Lista que armazenará os prefixos IPv6 gerados para os clientes.
+    clients_networks = []
+
+    while True:
+
+        try:
+
+            num_clients = int(input('\nEnter the number of clients: '))
+
+            if num_clients > 0:
+
+                break
+
+            else:
+
+                print('\nThe number of clients must be greater than zero.')
+
+        except:
+
+            print('\nInvalid number. Try again.')
+
+    # Para cada uma das sub-redes. 
+    for i in range(num_clients):
+
+        # Copiamos o endereço base. 
+        client_blocks = ipv6_blocks.copy()
+
+        # Em uma divisão /56 -> /64 utilizamos os
+        # últimos 8 bits do quarto bloco.
+        client_blocks[3] = hex(i)[2:].zfill(4)
+
+        # Comprimindo o bloco. 
+        formatted_client_blocks = format_ipv6(client_blocks)
+
+        # Adiciona o prefixo '/64'.
+        client_prefix = formatted_client_blocks + '/64'
+
+        clients_networks.append(client_prefix)
+        
+    
+    return clients_networks
+
 
 def leftmost_allocation():
     pass
