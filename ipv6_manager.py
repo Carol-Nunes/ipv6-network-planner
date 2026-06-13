@@ -623,7 +623,53 @@ def select_subnet(planning, location):
         except:
 
             print('\nInvalid option. Try again.')
+'''
+Simula a alocação de uma rede IPv6 utilizando
+o algoritmo Leftmost Allocation.
+'''
+def simulate_leftmost(planning):
 
+    location = select_location(planning)
+
+    subnet = select_subnet(planning, location)
+
+    allocated_network = leftmost_allocation(planning[location][subnet]['client_newtorks'])
+
+    print(f'\nLocation: {location}')
+
+    print(f'Subnet: {subnet}')
+
+    if allocated_network is None:
+
+        print('\nNo client networks available.')
+
+        return
+
+    print(f'\nAllocated Network: {allocated_network}')
+
+'''
+Simula a alocação de uma rede IPv6 utilizando
+o algoritmo Rightmost Allocation.
+'''
+def simulate_rightmost(planning):
+
+    location = select_location(planning)
+
+    subnet = select_subnet(planning,location)
+
+    allocated_network = rightmost_allocation(planning[location][subnet]['client_networks'])
+
+    print(f'\nLocation: {location}')
+
+    print(f'Subnet: {subnet}')
+
+    if allocated_network is None:
+
+        print('\nNo client networks available.')
+
+        return
+
+    print(f'\nAllocated Network: {allocated_network}')
 
 def show_menu():
 
