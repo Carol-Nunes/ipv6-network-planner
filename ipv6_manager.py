@@ -36,6 +36,56 @@ def bit_string_to_ipv6_hextets(bit_string):
     return ipv6_hextets
 
 '''
+ Zera bits de host a partir de prefix_len.
+ '''
+
+def apply_prefix(bits_str, prefix_len):
+   
+    return bits_str[:prefix_len] + '0' * (128 - prefix_len)
+
+'''
+Gera uma sub-rede IPv6 a partir de um bloco pai utilizando manipulação de bits.
+
+A função divide o espaço de endereçamento disponível entre o prefixo pai e o novo prefixo,
+calculando quantas sub-redes são possíveis e utilizando um offset para selecionar a posição
+da sub-rede dentro do espaço disponível.
+'''
+
+def generate_subnets(parent_bits, parent_prefix, new_prefix, offset):
+
+    # Você NÃO pode criar uma rede “maior” que a anterior.
+    if new_prefix < parent_prefix:
+
+        raise ValueError("new_prefix cannot be less than parent_prefix")
+    
+    # Verificando quantos bits estão disponíveis para a criação da subrede. 
+    bits_needed = new_prefix - parent_prefix
+
+    max_offset = (2 ** bits_needed) - 1
+
+    if offset > max_offset:
+
+        raise ValueError(f"Offset {offset} exceeds limit for {bits_needed} bits")
+    
+    # Mantém a parte fixa da rede pai. 
+    new_bits = parent_bits[:parent_prefix]
+
+    # Transforma o offset em binário. 
+    # Pega o offset, transforma em binário (por isso o b), 
+    # adiciona zeros à esquerda (por isso o 0) e deixa no tamanho 
+    # da quantidade de bits que estarão disponsíveis para a subrede. 
+    offset_bits = format(offset, f'0{bits_needed}b')
+
+    new_bits += offset_bits
+
+    # Zerando a parte de host 
+    new_bits += '0' * (128 - new_prefix)
+
+    return new_bits
+
+
+
+'''
 Expande um endereço IPv6 abreviado para sua forma completa.
 Exemplo:
 2804:1f4a::/32
