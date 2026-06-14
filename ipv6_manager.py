@@ -333,10 +333,11 @@ def rightmost_allocation(clients_networks):
     return clients_networks.pop()
 
 '''
-Reserva um endereço IPv6 para utilização como Anycast.
+Reserva um endereço Anycast dentro do bloco destinado
+à categoria Anycast da localidade.
 
-O endereço reservado corresponde ao primeiro endereço utilizável
-da sub-rede, sendo representado pelo identificador ::1.
+Por convenção neste trabalho, o endereço reservado
+corresponde ao identificador ::1 do bloco.
 '''
 
 def reserve_anycast(subnet_ipv6):
@@ -438,7 +439,7 @@ def generate_ipv6_planning():
     # Aqui, eu optei por criar listas fixas a fim de facilitar o programa. 
     # Aí caso, queira colocar novas cidades é só adicionar na lista. 
     cities = ["São Paulo", "Rio de Janeiro", "Curitiba", "Recife", "Porto Alegre"]
-    categories = ["residencial", "corporativo", "infraestrutura", "servicos_internos"]
+    categories = ["residencial", "corporativo", "infraestrutura", "servicos_internos", "anycast"]
 
     # Segundo a Aula 05, os prefixos devem ser distribuídos da seguinte maneira: 
     # residencial: /40 
@@ -450,7 +451,8 @@ def generate_ipv6_planning():
         'residencial': 40,
         'corporativo': 40,
         'infraestrutura': 48,
-        'servicos_internos': 48
+        'servicos_internos': 48,
+        'anycast': 64
     } 
 
     num_clients = get_number_of_clients()
@@ -484,52 +486,25 @@ def generate_ipv6_planning():
         # Gerando clientes residenciais. 
         # Segundo a aula 5, a partir do bloco /40, geramos /56
         residential_prefix = city_data['categories']['residencial']['prefix']
+
         residential_clients = generate_clients_networks(residential_prefix, num_clients, 56)
+
         city_data['categories']['residencial']['clients'] = residential_clients
 
         # Gerando clientes corporativos. 
         # Segundo a aula 5, a partir do bloco /40, geramos /48
         corporative_prefix = city_data['categories']['corporativo']['prefix']
+
         corporative_clients = generate_clients_networks(corporative_prefix, num_clients, 48)
+
         city_data['categories']['corporativo']['clients'] = corporative_clients
 
-        # Gerando endereços anycast. 
-        # Dentro do bloco de infraestrutura (/48), reservar um /64 e alocar serviços. 
-        infrastructure_prefix = city_data['categories']['infraestrutura']['prefix']
+        # Reservando endereços anycast 
+        anycast_prefix = city_data['categories']['anycast']['prefix']
 
-        infrastructure_address = infrastructure_prefix.split('/')[0]
+        anycast_address = reserve_anycast(anycast_prefix)
 
-        infrastructure_address_hextets = expand_ipv6(infrastructure_address)
-
-        infrastructure_address_bits = ipv6_hextets_to_bit_string(infrastructure_address_hextets)
-
-        anycast_bits = generate_subnets(infrastructure_address_bits, 48, 64, 0)
-
-        anycast_prefix = bits_to_prefix(anycast_bits, 64)
-
-        # Agora, dentro desse /64, reservar endereços anycast para serviços (::1, ::2, ::3)
-        anycast_services = ['DNS', 'NTP', 'Gateway']
-
-        anycast_addresses = []
-
-        base_address = anycast_prefix.split('/')[0]
-
-        base_address_hextets = expand_ipv6(base_address)
-
-        base_last = int(base_address_hextets[7], 16)  # último grupo
-
-        for i, service in enumerate(anycast_services):
-
-            hextets_copy = base_address_hextets.copy()
-
-            hextets_copy[7] = hex(base_last + i + 1)[2:].zfill(4)
-
-            addr = format_ipv6(hextets_copy)
-
-            anycast_addresses.append((service, addr))
-        
-        city_data['categories']['infraestrutura']['anycast_prefix'] = anycast_prefix
-        city_data['categories']['infraestrutura']['anycast_addresses'] = anycast_addresses
+        city_data['categories']['anycast']['address'] = anycast_address
 
         planning[city] = city_data
 
@@ -549,23 +524,31 @@ def show_planning(planning, ipv6_block):
     print(f'\nIPv6 block: {ipv6_block}')
 
     for city, data in planning.items():
+
         print(f'\nCity: {city}')
+
         print(f'City Prefix: {data['prefix']}')
 
         for cat_name, cat_data in data['categories'].items():
+
             print(f'\n    Category: {cat_name}')
-            print(f'    Block: {cat_data['prefix']}')
-            if cat_name == 'infraestrutura':
-                # Mostra o bloco anycast dentro da infra
-                print(f'        Anycast reserved block: {cat_data['anycast_prefix']}')
-                print('        Anycast addresses for services:')
-                for service, addr in cat_data['anycast_addresses']:
-                    print(f'            {service} -> {addr}')
-            elif cat_data['clients']:
+
+            print(f'    Block: {cat_data["prefix"]}')
+
+            if cat_name == 'anycast':
+
+                print(f'    Reserved Address: {cat_data["address"]}')
+
+            if cat_data['clients']:
+
                 print('    Client Networks:')
+
                 for i, net in enumerate(cat_data['clients']):
-                    print(f'        Client {i+1} -> {net}')
+
+                    print(f'        Client {i + 1} -> {net}')
+
             else:
+
                 print('    (No clients generated for this category)')
 
 '''
@@ -606,7 +589,7 @@ de uma determinada localidade.
 
 Retorna o nome da sub-rede selecionada.
 '''
-def select_client_categorie(planning, location):
+def select_client_category(planning, location):
 
     categories = ['residencial', 'corporativo']
 
@@ -639,15 +622,15 @@ def simulate_leftmost(planning):
 
     city = select_city(planning)
 
-    categoriy = select_client_categorie(planning, city)
+    category = select_client_category(planning, city)
 
-    clients_list = planning[city]['categories'][categoriy]['clients']
+    clients_list = planning[city]['categories'][category]['clients']
 
     allocated_network = leftmost_allocation(clients_list)
 
     print(f'\nCity: {city}')
 
-    print(f'Categorie: {categoriy}')
+    print(f'Category: {category}')
 
     if allocated_network is None:
 
@@ -665,7 +648,7 @@ def simulate_rightmost(planning):
 
     city = select_city(planning)
 
-    category = select_client_categorie(planning,city)
+    category = select_client_category(planning,city)
 
     clients_list = planning[city]['categories'][category]['clients']
 
@@ -673,7 +656,7 @@ def simulate_rightmost(planning):
 
     print(f'\nCity: {city}')
 
-    print(f'Categorie: {category}')
+    print(f'Category: {category}')
 
     if allocated_network is None:
 
