@@ -690,9 +690,15 @@ def menu():
 
         if option == '1':
 
-            planning, main_block, = generate_ipv6_planning()
+            try:
 
-            show_planning(planning, main_block)
+                planning, main_block = generate_ipv6_planning()
+
+                show_planning(planning, main_block)
+
+            except ValueError as error:
+
+                print(f'\nError: {error}')
 
         elif option == '2':
 
