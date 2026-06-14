@@ -33,57 +33,32 @@ def bit_string_to_ipv6_hextets(bit_string):
 
         ipv6_hextets.append(hex_group)
     
-    return ipv6_hextets
+    return ipv6_hextets    
 
 '''
- Zera bits de host a partir de prefix_len.
- '''
-
-def apply_prefix(bits_str, prefix_len):
-   
-    return bits_str[:prefix_len] + '0' * (128 - prefix_len)
-
+Converte bits + prefixo para string IPv6/CIDR (comprimida).
 '''
-Gera uma sub-rede IPv6 a partir de um bloco pai utilizando manipulação de bits.
-
-A função divide o espaço de endereçamento disponível entre o prefixo pai e o novo prefixo,
-calculando quantas sub-redes são possíveis e utilizando um offset para selecionar a posição
-da sub-rede dentro do espaço disponível.
-'''
-
-def generate_subnets(parent_bits, parent_prefix, new_prefix, offset):
-
-    # Você NÃO pode criar uma rede “maior” que a anterior.
-    if new_prefix < parent_prefix:
-
-        raise ValueError("new_prefix cannot be less than parent_prefix")
+def bits_to_prefix(bits_string, prefix):
     
-    # Verificando quantos bits estão disponíveis para a criação da subrede. 
-    bits_needed = new_prefix - parent_prefix
+    hextets = bit_string_to_ipv6_hextets(bits_string)
+    ip = format_ipv6(hextets)
+    return f'{ip}/{prefix}'
 
-    max_offset = (2 ** bits_needed) - 1
+'''
+Solicita ao usuário um bloco IPv6 válido.
+Retorna o bloco IPv6 informado.
+'''
+def get_ipv6_block():
 
-    if offset > max_offset:
+    while True:
 
-        raise ValueError(f"Offset {offset} exceeds limit for {bits_needed} bits")
-    
-    # Mantém a parte fixa da rede pai. 
-    new_bits = parent_bits[:parent_prefix]
+        ipv6_block = input('\nEnter the IPv6 block (e.g. 2804:1f4a::/32): ')
 
-    # Transforma o offset em binário. 
-    # Pega o offset, transforma em binário (por isso o b), 
-    # adiciona zeros à esquerda (por isso o 0) e deixa no tamanho 
-    # da quantidade de bits que estarão disponsíveis para a subrede. 
-    offset_bits = format(offset, f'0{bits_needed}b')
+        if validate_ipv6(ipv6_block):
 
-    new_bits += offset_bits
+            return ipv6_block
 
-    # Zerando a parte de host 
-    new_bits += '0' * (128 - new_prefix)
-
-    return new_bits
-
-
+        print('\nInvalid IPv6 block. Try again.')
 
 '''
 Expande um endereço IPv6 abreviado para sua forma completa.
@@ -327,8 +302,6 @@ def get_number_of_clients():
 
             print('\nInvalid number. Try again.')
 
-
-
 '''
 Aloca a primeira rede disponível utilizando
 o algoritmo Leftmost Allocation.
@@ -377,100 +350,249 @@ def reserve_anycast(subnet_ipv6):
 
     return formatted_anycast
 
+'''
+Gera uma sub-rede IPv6 a partir de um bloco pai utilizando manipulação de bits.
+
+A função divide o espaço de endereçamento disponível entre o prefixo pai e o novo prefixo,
+calculando quantas sub-redes são possíveis e utilizando um offset para selecionar a posição
+da sub-rede dentro do espaço disponível.
+'''
+
+def generate_subnets(parent_bits, parent_prefix, new_prefix, offset):
+
+    # Você NÃO pode criar uma rede “maior” que a anterior.
+    if new_prefix < parent_prefix:
+
+        raise ValueError("new_prefix cannot be less than parent_prefix")
+    
+    # Verificando quantos bits estão disponíveis para a criação da subrede. 
+    bits_needed = new_prefix - parent_prefix
+
+    max_offset = (2 ** bits_needed) - 1
+
+    if offset > max_offset:
+
+        raise ValueError(f"Offset {offset} exceeds limit for {bits_needed} bits")
+    
+    # Mantém a parte fixa da rede pai. 
+    new_bits = parent_bits[:parent_prefix]
+
+    # Transforma o offset em binário. 
+    # Pega o offset, transforma em binário (por isso o b), 
+    # adiciona zeros à esquerda (por isso o 0) e deixa no tamanho 
+    # da quantidade de bits que estarão disponsíveis para a subrede. 
+    offset_bits = format(offset, f'0{bits_needed}b')
+
+    new_bits += offset_bits
+
+    # Zerando a parte de host 
+    new_bits += '0' * (128 - new_prefix)
+
+    return new_bits
+
+'''
+Gera uma lista de sub-redes IPv6 exclusivas de uma rede para um número específico de clientes.
+'''
+
+def generate_clients_networks(parent_prefix, num_clients, new_prefix):
+
+    parent_address = parent_prefix.split('/')[0]
+
+    parent_address_hextets = expand_ipv6(parent_address)
+
+    parent_address_bits = ipv6_hextets_to_bit_string(parent_address_hextets)
+
+    parent_prefix_len = int(parent_prefix.split('/')[1])
+
+    client_networks = []
+
+    # Percorre o número de clientes para gerar uma sub-rede para cada um
+    for i in range(num_clients):
+
+        client_bits = generate_subnets(parent_address_bits, parent_prefix_len, new_prefix, i)
+
+        client_prefix = bits_to_prefix(client_bits, new_prefix)
+
+        client_networks.append(client_prefix)
+
+    
+    return client_networks
+
+
 def generate_ipv6_planning():
 
-    ipv6_block = get_ipv6_block()
+    # Entrada do endereço base, expansão dele, 
+    # conversão para binário e captura do prefixo. 
+    main_block = get_ipv6_block()
+    expanded_main_block = expand_ipv6(main_block)
+    main_block_bits = ipv6_hextets_to_bit_string(expanded_main_block)
+    main_block_prefix = int(main_block.split('/')[1])
 
-    locations_ipv6 = generate_locations(ipv6_block)
+    if main_block_prefix != 32:
 
-    subnets = get_subnets()
+        raise ValueError("The main block must be /32 for this planning.")
+    
+    # Zerando a parte de host só por garantia. 
+    main_block_bits = main_block_bits[:main_block_prefix] + '0' * (128 - main_block_prefix)
+
+    # Aqui, eu optei por criar listas fixas a fim de facilitar o programa. 
+    # Aí caso, queira colocar novas cidades é só adicionar na lista. 
+    cities = ["São Paulo", "Rio de Janeiro", "Curitiba", "Recife", "Porto Alegre"]
+    categories = ["residencial", "corporativo", "infraestrutura", "servicos_internos"]
+
+    # Segundo a Aula 05, os prefixos devem ser distribuídos da seguinte maneira: 
+    # residencial: /40 
+    # corporativo: /40 
+    # infraestrutura: /48
+    # servicos_internos: /48
+    # anycast: /64
+    categories_prefixes = {
+        'residencial': 40,
+        'corporativo': 40,
+        'infraestrutura': 48,
+        'servicos_internos': 48
+    } 
 
     num_clients = get_number_of_clients()
 
     planning = {}
 
-    for location, location_prefix in locations_ipv6.items():
+    for i, city in enumerate(cities):
 
-        planning[location] = {}
+        # Segundo a Aula 5, as cidades devem receber prefixo /36. 
+        city_bits = generate_subnets(main_block_bits, 32, 36, i)
+        city_prefix = bits_to_prefix(city_bits, 36)
 
-        subnets_ipv6 = generate_subnets(location_prefix, subnets)
+        city_data = {
 
-        for subnet, subnet_prefix in subnets_ipv6.items():
+            'prefix': city_prefix,
+            'categories': {}
+        }
 
-            clients_networks = generate_clients_networks(subnet_prefix, num_clients)
+        # Gerando os blocos de ipv6 para cada categoria. 
+        for i, category in enumerate(categories):
 
-            anycast_address = reserve_anycast(subnet_prefix)
+            categorie_bits = generate_subnets(city_bits, 36, categories_prefixes[category], i)
+            categorie_prefix = bits_to_prefix(categorie_bits, categories_prefixes[category])
 
-            planning[location][subnet] = {
+            city_data['categories'][category] = {
 
-                'prefix': subnet_prefix,
-                
-                'anycast': anycast_address,
-
-                'clients_networks': clients_networks
+                'prefix': categorie_prefix,
+                'clients': []
             }
 
-    return planning, ipv6_block, locations_ipv6
+        # Gerando clientes residenciais. 
+        # Segundo a aula 5, a partir do bloco /40, geramos /56
+        residential_prefix = city_data['categories']['residencial']['prefix']
+        residential_clients = generate_clients_networks(residential_prefix, num_clients, 56)
+        city_data['categories']['residencial']['clients'] = residential_clients
+
+        # Gerando clientes corporativos. 
+        # Segundo a aula 5, a partir do bloco /40, geramos /48
+        corporative_prefix = city_data['categories']['corporativo']['prefix']
+        corporative_clients = generate_clients_networks(corporative_prefix, num_clients, 48)
+        city_data['categories']['corporativo']['clients'] = corporative_clients
+
+        # Gerando endereços anycast. 
+        # Dentro do bloco de infraestrutura (/48), reservar um /64 e alocar serviços. 
+        infrastructure_prefix = city_data['categories']['infraestrutura']['prefix']
+
+        infrastructure_address = infrastructure_prefix.split('/')[0]
+
+        infrastructure_address_hextets = expand_ipv6(infrastructure_address)
+
+        infrastructure_address_bits = ipv6_hextets_to_bit_string(infrastructure_address_hextets)
+
+        anycast_bits = generate_subnets(infrastructure_address_bits, 48, 64, 0)
+
+        anycast_prefix = bits_to_prefix(anycast_bits, 64)
+
+        # Agora, dentro desse /64, reservar endereços anycast para serviços (::1, ::2, ::3)
+        anycast_services = ['DNS', 'NTP', 'Gateway']
+
+        anycast_addresses = []
+
+        base_address = anycast_prefix.split('/')[0]
+
+        base_address_hextets = expand_ipv6(base_address)
+
+        base_last = int(base_address_hextets[7], 16)  # último grupo
+
+        for i, service in enumerate(anycast_services):
+
+            hextets_copy = base_address_hextets.copy()
+
+            hextets_copy[7] = hex(base_last + i + 1)[2:].zfill(4)
+
+            addr = format_ipv6(hextets_copy)
+
+            anycast_addresses.append((service, addr))
+        
+        city_data['categories']['infraestrutura']['anycast_prefix'] = anycast_prefix
+        city_data['categories']['infraestrutura']['anycast_addresses'] = anycast_addresses
+
+        planning[city] = city_data
+
+
+    return planning, main_block
 
 '''
 Exibe toda a estrutura de planejamento IPv6
 gerada pelo sistema.
 '''
 
-def show_planning(planning, ipv6_block, locations_ipv6):
+def show_planning(planning, ipv6_block):
 
     print('\n=========================================')
     print('IPv6 Planning')
     print('=========================================')
     print(f'\nIPv6 block: {ipv6_block}')
 
-    for location, subnets in planning.items():
+    for city, data in planning.items():
+        print(f'\nCity: {city}')
+        print(f'City Prefix: {data['prefix']}')
 
-        print(f'\nLocation: {location}')
+        for cat_name, cat_data in data['categories'].items():
+            print(f'\n    Category: {cat_name}')
+            print(f'    Block: {cat_data['prefix']}')
+            if cat_name == 'infraestrutura':
+                # Mostra o bloco anycast dentro da infra
+                print(f'        Anycast reserved block: {cat_data['anycast_prefix']}')
+                print('        Anycast addresses for services:')
+                for service, addr in cat_data['anycast_addresses']:
+                    print(f'            {service} -> {addr}')
+            elif cat_data['clients']:
+                print('    Client Networks:')
+                for i, net in enumerate(cat_data['clients']):
+                    print(f'        Client {i+1} -> {net}')
+            else:
+                print('    (No clients generated for this category)')
 
-        print(f'Location Prefix: {locations_ipv6[location]}')
-
-        for subnet, subnet_data in subnets.items():
-
-            print(f'\n    Subnet: {subnet}')
-
-            print(f'    Prefix: '
-                f'{subnet_data["prefix"]}')
-
-            print(f'    Anycast: '
-                f'{subnet_data["anycast"]}')
-
-            print('\n    Client Networks:')
-
-            for i, network in enumerate(subnet_data['clients_networks']):
-
-                print(f'        Client Network {i + 1}'
-                    f' -> {network}')
 '''
 Permite ao usuário selecionar uma localidade
 do planejamento IPv6.
 
 Retorna o nome da localidade selecionada.
 '''
-def select_location(planning):
+def select_city(planning):
 
-    locations = list(planning.keys())
+    cities = list(planning.keys())
 
     while True:
 
         try:
 
-            print('\nSelect a location:\n')
+            print('\nSelect a city:\n')
 
-            for i, location in enumerate(locations):
+            for i, city in enumerate(cities):
 
-                print(f'{i + 1} - {location}')
+                print(f'{i + 1} - {city}')
 
             option = int(input('\nOption: '))
 
-            if 1 <= option <= len(locations):
+            if 1 <= option <= len(cities):
 
-                return locations[option - 1]
+                return cities[option - 1]
 
             print('\nInvalid option. Try again.')
 
@@ -484,25 +606,25 @@ de uma determinada localidade.
 
 Retorna o nome da sub-rede selecionada.
 '''
-def select_subnet(planning, location):
+def select_client_categorie(planning, location):
 
-    subnets = list(planning[location].keys())
+    categories = ['residencial', 'corporativo']
 
     while True:
 
         try:
 
-            print('\nSelect a subnet:\n')
+            print('\nSelect a category:\n')
 
-            for i, subnet in enumerate(subnets):
+            for i, category in enumerate(categories):
 
-                print(f'{i + 1} - {subnet}')
+                print(f'{i + 1} - {category}')
 
             option = int(input('\nOption: '))
 
-            if 1<= option <= len(subnets):
+            if 1<= option <= len(categories):
 
-                return subnets[option - 1]
+                return categories[option - 1]
 
             print('\nInvalid option. Try again.')
 
@@ -515,15 +637,17 @@ o algoritmo Leftmost Allocation.
 '''
 def simulate_leftmost(planning):
 
-    location = select_location(planning)
+    city = select_city(planning)
 
-    subnet = select_subnet(planning, location)
+    categoriy = select_client_categorie(planning, city)
 
-    allocated_network = leftmost_allocation(planning[location][subnet]['clients_networks'])
+    clients_list = planning[city]['categories'][categoriy]['clients']
 
-    print(f'\nLocation: {location}')
+    allocated_network = leftmost_allocation(clients_list)
 
-    print(f'Subnet: {subnet}')
+    print(f'\nCity: {city}')
+
+    print(f'Categorie: {categoriy}')
 
     if allocated_network is None:
 
@@ -539,15 +663,17 @@ o algoritmo Rightmost Allocation.
 '''
 def simulate_rightmost(planning):
 
-    location = select_location(planning)
+    city = select_city(planning)
 
-    subnet = select_subnet(planning,location)
+    category = select_client_categorie(planning,city)
 
-    allocated_network = rightmost_allocation(planning[location][subnet]['clients_networks'])
+    clients_list = planning[city]['categories'][category]['clients']
 
-    print(f'\nLocation: {location}')
+    allocated_network = rightmost_allocation(clients_list)
 
-    print(f'Subnet: {subnet}')
+    print(f'\nCity: {city}')
+
+    print(f'Categorie: {category}')
 
     if allocated_network is None:
 
@@ -581,9 +707,9 @@ def menu():
 
         if option == '1':
 
-            planning, ipv6_block, locations_ipv6 = generate_ipv6_planning()
+            planning, main_block, = generate_ipv6_planning()
 
-            show_planning(planning, ipv6_block, locations_ipv6)
+            show_planning(planning, main_block)
 
         elif option == '2':
 
