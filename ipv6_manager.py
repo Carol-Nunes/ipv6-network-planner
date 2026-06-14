@@ -1,4 +1,41 @@
 '''
+Funções auxiliares para conversão de hexadecimal <-> binário
+'''
+
+def ipv6_hextets_to_bit_string(ipv6_hextets):
+
+    bit_string = ''
+
+    for hextet in ipv6_hextets:
+
+        for hex_digit in hextet:
+
+            bit_string += f'{int(hex_digit, 16):04b}'
+
+    return bit_string
+
+def bit_string_to_ipv6_hextets(bit_string):
+
+    ipv6_hextets = []
+
+    # Corta o bloco de bits em 8 blocos de 16 bits. 
+    for i in range(0, 128, 16):
+
+        bit_group = bit_string[i: i + 16]
+
+        # Para cada grupo de 16 bits obtidos, iremos 
+        # convertê-los para hexadecimal. 
+        hex_group = ''
+
+        for j in range(0, 16, 4):
+
+            hex_group += f"{int(bit_group[j:j+4], 2):X}"
+
+        ipv6_hextets.append(hex_group)
+    
+    return ipv6_hextets
+
+'''
 Expande um endereço IPv6 abreviado para sua forma completa.
 Exemplo:
 2804:1f4a::/32
@@ -221,150 +258,6 @@ def validate_ipv6(ipv6_block):
             
     return True
 
-'''
-Recebe do usuário a quantidade de localidades e seus respectivos nomes.
-Retorna uma lista contendo os nomes informados.
-'''
-
-def get_locations():
-
-    locations = []
-
-    while True:
-
-        try:
-        
-            num_locations = int(input('\nEnter the number of locations: '))
-
-            if num_locations > 0:
-
-                break
-
-            print('\nThe number of locations must be greater than zero.')
-
-        except:
-
-            print('\nInvalid number. Try again.')
-
-    for i in range(num_locations):
-
-        location = input(f'\nEnter the name of location {i + 1}: ')
-
-        locations.append(location)
-    
-    return locations 
-
-'''
-Gera um prefixo IPv6 /48 para cada localidade informada pelo usuário.
-Retorna um dicionário contendo o nome da localidade e seu
-respectivo prefixo IPv6.
-'''
-
-def generate_locations(ipv6_block):
-    
-    ipv6_blocks = expand_ipv6(ipv6_block)
-
-    locations = get_locations()
-
-    # Dicionário que armazenará cada localidade e seu respectivo ipv6. 
-    locations_ipv6 = {}
-
-    # Para cada uma das localidades 
-    for i, location in enumerate(locations):
-
-        # Copiamos o endereço base. 
-        location_blocks = ipv6_blocks.copy()
-
-        # O bloco principal do trabalho é um /32.
-        # Portanto, utilizamos o terceiro bloco IPv6 para identificar
-        # cada localidade, gerando prefixos /48.
-        location_blocks[2] = hex(i)[2:].zfill(4)
-
-        # Comprimindo o bloco. 
-        formatted_location_blocks = format_ipv6(location_blocks)
-
-        #Adiciona o prefixo '/48'
-        location_prefix = formatted_location_blocks + '/48'
-
-        #Guarda no dicionário. 
-        locations_ipv6[location] = location_prefix
-    
-    return locations_ipv6
-
-'''
-Recebe do usuário a quantidade de subredes e seus respectivos nomes.
-Retorna uma lista contendo os nomes informados.
-'''
-
-def get_subnets():
-
-    subnets = []
-
-    while True:
-
-        try:
-        
-            num_subnets = int(input('\nEnter the number of subnets: '))
-
-            if num_subnets > 0:
-
-                break
-
-            print('\nThe number of subnets must be greater than zero.')
-
-        except:
-
-            print('\nInvalid number. Try again.')
-
-    for i in range(num_subnets):
-
-        subnet = input(f'\nEnter the name of subnet {i + 1}: ')
-
-        subnets.append(subnet)
-    
-    return subnets 
-
-'''
-Divide o prefixo IPv6 de uma localidade (/48) em sub-redes /56.
-Cada sub-rede recebe um identificador único no quarto bloco do
-endereço IPv6, permitindo a organização hierárquica do
-endereçamento e futuras subdivisões em redes menores.
-'''
-
-
-def generate_subnets(location_ipv6, subnets):
-    
-    ipv6_blocks = expand_ipv6(location_ipv6)
-
-    # Dicionário que armazenará cada sub-rede e seu respectivo IPv6.
-    subnets_ipv6 = {}
-
-    # Para cada uma das sub-redes. 
-    for i, subnet in enumerate(subnets):
-
-        # Copiamos o endereço base. 
-        subnet_blocks = ipv6_blocks.copy()
-
-        # Como estamos dividindo um prefixo /48 em prefixos /56,
-        # utilizamos os primeiros 8 bits do quarto bloco para
-        # identificar cada sub-rede.
-        subnet_blocks[3] = hex(i * 256)[2:].zfill(4)
-
-        # Comprimindo o bloco. 
-        formatted_subnet_blocks = format_ipv6(subnet_blocks)
-
-        #Adiciona o prefixo '/56'
-        subnet_prefix = formatted_subnet_blocks + '/56'
-
-        #Guarda no dicionário. 
-        subnets_ipv6[subnet] = subnet_prefix
-    
-    return subnets_ipv6
-
-'''
-Solicita ao usuário a quantidade de clientes que deverão
-receber redes IPv6.
-'''
 
 def get_number_of_clients():
 
@@ -384,43 +277,6 @@ def get_number_of_clients():
 
             print('\nInvalid number. Try again.')
 
-'''
-Gera redes IPv6 /64 para clientes a partir de uma sub-rede /56.
-
-Essa função é utilizada para simular a distribuição de redes
-IPv6 para clientes e servir de base para os algoritmos de
-alocação Leftmost e Rightmost.
-
-Retorna uma lista contendo os prefixos IPv6 gerados.
-'''
-
-def generate_clients_networks(subnet_ipv6, num_clients):
-
-    ipv6_blocks = expand_ipv6(subnet_ipv6)
-
-    # Lista que armazenará os prefixos IPv6 gerados para os clientes.
-    clients_networks = []
-
-    # Para cada uma das sub-redes. 
-    for i in range(num_clients):
-
-        # Copiamos o endereço base. 
-        client_blocks = ipv6_blocks.copy()
-
-        # Em uma divisão /56 -> /64 utilizamos os
-        # últimos 8 bits do quarto bloco.
-        client_blocks[3] = hex(i)[2:].zfill(4)
-
-        # Comprimindo o bloco. 
-        formatted_client_blocks = format_ipv6(client_blocks)
-
-        # Adiciona o prefixo '/64'.
-        client_prefix = formatted_client_blocks + '/64'
-
-        clients_networks.append(client_prefix)
-        
-    
-    return clients_networks
 
 
 '''
@@ -471,35 +327,13 @@ def reserve_anycast(subnet_ipv6):
 
     return formatted_anycast
 
-'''
-Solicita ao usuário um bloco IPv6 válido.
-Retorna o bloco IPv6 informado.
-'''
-def get_ipv6_block():
-
-    while True:
-
-        ipv6_block = input('\nEnter the IPv6 block (e.g. 2804:1f4a::/32): ')
-
-        if validate_ipv6(ipv6_block):
-
-            return ipv6_block
-
-        print('\nInvalid IPv6 block. Try again.')
-
-
-'''
-Gera e exibe toda a hierarquia de planejamento IPv6,
-incluindo localidades, sub-redes, redes de clientes e endereços anycast.
-'''
-
 def generate_ipv6_planning():
 
     ipv6_block = get_ipv6_block()
 
     locations_ipv6 = generate_locations(ipv6_block)
 
-    subnets = get_subnets
+    subnets = get_subnets()
 
     num_clients = get_number_of_clients()
 
@@ -526,14 +360,14 @@ def generate_ipv6_planning():
                 'clients_networks': clients_networks
             }
 
-    return planning, ipv6_block
+    return planning, ipv6_block, locations_ipv6
 
 '''
 Exibe toda a estrutura de planejamento IPv6
 gerada pelo sistema.
 '''
 
-def show_planning(planning, ipv6_block):
+def show_planning(planning, ipv6_block, locations_ipv6):
 
     print('\n=========================================')
     print('IPv6 Planning')
@@ -543,6 +377,8 @@ def show_planning(planning, ipv6_block):
     for location, subnets in planning.items():
 
         print(f'\nLocation: {location}')
+
+        print(f'Location Prefix: {locations_ipv6[location]}')
 
         for subnet, subnet_data in subnets.items():
 
@@ -556,9 +392,9 @@ def show_planning(planning, ipv6_block):
 
             print('\n    Client Networks:')
 
-            for i, network in enumerate(subnet_data['client_networks']):
+            for i, network in enumerate(subnet_data['clients_networks']):
 
-                print(f'        Client {i + 1}'
+                print(f'        Client Network {i + 1}'
                     f' -> {network}')
 '''
 Permite ao usuário selecionar uma localidade
@@ -582,7 +418,7 @@ def select_location(planning):
 
             option = int(input('\nOption: '))
 
-            if option >= 1 or option <= len(locations):
+            if 1 <= option <= len(locations):
 
                 return locations[option - 1]
 
@@ -614,7 +450,7 @@ def select_subnet(planning, location):
 
             option = int(input('\nOption: '))
 
-            if option >= 1 or option <= len(subnets):
+            if 1<= option <= len(subnets):
 
                 return subnets[option - 1]
 
@@ -633,7 +469,7 @@ def simulate_leftmost(planning):
 
     subnet = select_subnet(planning, location)
 
-    allocated_network = leftmost_allocation(planning[location][subnet]['client_newtorks'])
+    allocated_network = leftmost_allocation(planning[location][subnet]['clients_networks'])
 
     print(f'\nLocation: {location}')
 
@@ -657,7 +493,7 @@ def simulate_rightmost(planning):
 
     subnet = select_subnet(planning,location)
 
-    allocated_network = rightmost_allocation(planning[location][subnet]['client_networks'])
+    allocated_network = rightmost_allocation(planning[location][subnet]['clients_networks'])
 
     print(f'\nLocation: {location}')
 
@@ -695,9 +531,9 @@ def menu():
 
         if option == '1':
 
-            planning = generate_ipv6_planning()
+            planning, ipv6_block, locations_ipv6 = generate_ipv6_planning()
 
-            show_planning(planning)
+            show_planning(planning, ipv6_block, locations_ipv6)
 
         elif option == '2':
 
